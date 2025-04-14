@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Noon NIN Fetcher</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="static/style.css">
+</head>
+<body>
+
+    <h2>Noon NIN Fetcher</h2>
+
+    <!-- NIN Input Form -->
+    <form id="ninForm">
+        <label for="region">Select Region:</label>
+        <select id="region">
+            <option value="uae">UAE</option>
+            <option value="saudi">Saudi</option>
+        </select>
+
+        <br><br>
+
+        <label for="nin">Enter NIN Codes (comma-separated):</label>
+        <input type="text" id="nin" required>
+        <button type="submit">Fetch Products</button>
+    </form>
+
+    <br><hr><br>
+
+    <!-- Excel Upload Form -->
+    <form id="excelForm" enctype="multipart/form-data">
+        <label for="file">Upload Excel File:</label>
+        <input type="file" id="file" name="file" accept=".xlsx">
+        <input type="text" id="category_name" name="category_name" placeholder="Enter category name">
+        <button type="submit">Upload & Fetch</button>
+    </form>
+
+    <br><hr><br>
+
+    <!-- Product Results Table -->
+    <table id="resultsTable">
+        <thead>
+            <tr>
+                <th>NIN Code</th>
+                <th>Product Name</th>
+                <th>Noon Image</th>
+                <th>Product Link</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <button id="downloadAll" style="display: none;">Download All Images (ZIP)</button>
+
+    <script>
+    $(document).ready(function () {
+        console.log("JavaScript Loaded");
+
+        // Fetch NIN Products
+        $("#ninForm").submit(function (event) {
+            event.preventDefault();
+            console.log("Fetch Button Clicked");
+
+            let nins = $("#nin").val().trim().split(",");
+            let region = $("#region").val();
+
+            if (nins.length === 0 || nins[0] === "") {
+                alert("Please enter at least one NIN code.");
+                return;
+            }
+
+            console.log("Sending AJAX Request to /fetch with data:", nins, region);
+
+            $.ajax({
+                url: "/fetch",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ nins: nins, region: region }),
+                success: function (data) {
+                    console.log("Response Received:", data);
+                    $("#resultsTable tbody").empty();
+
+                    if (data.length === 0) {
+                        alert("No products found. Check NIN codes.");
+                    } else {
+                        data.forEach(product => {
+                            let row = `<tr>
+                                <td>${product.nin}</td>
+                                <td>${product.product_name}</td>
+                                <td><img src="${product.image_url}" width="100"></td>
+                                <td><a href="${product.product_url}" target="_blank">View Product</a></td>
+                            </tr>`;
+                            $("#resultsTable tbody").append(row);
+                        });
+                        $("#downloadAll").show();
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error("AJAX Request Failed:", error);
+                    alert("Failed to fetch product data. Check console for details.");
+                }
+            });
+        });
+
+        // Excel Upload Handler
+        $("#excelForm").submit(function (event) {
+            event.preventDefault();
+            console.log("Excel Upload Button Clicked");
+
+            let formData = new FormData();
+            let fileInput = $("#file")[0].files[0];
+
+            if (!fileInput) {
+                alert("Please select an Excel file.");
+                return;
+            }
+
+            formData.append("file", fileInput);
+            formData.append("category_name", $("#category_name").val());
+            formData.append("region", $("#region").val());
+
+            console.log("Uploading Excel file...");
+
+            $.ajax({
+                url: "/upload",
+                type: "POST",
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function (response) {
+                    console.log("Response Received:", response);
+                    $("#resultsTable tbody").empty();
+
+                    if (response.products.length === 0) {
+                        alert("No products found in the Excel file.");
+                    } else {
+                        response.products.forEach(product => {
+                            let row = `<tr>
+                                <td>${product.nin}</td>
+                                <td>${product.product_name}</td>
+                                <td><img src="${product.image_url}" width="100"></td>
+                                <td><a href="${product.product_url}" target="_blank">View Product</a></td>
+                            </tr>`;
+                            $("#resultsTable tbody").append(row);
+                        });
+                        $("#downloadAll").show();
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error("Excel Upload Failed:", error);
+                    alert("Failed to process Excel file.");
+                }
+            });
+        });
+
+        // Download ZIP Handler
+        $("#downloadAll").click(function () {
+            console.log("Download button clicked! Requesting ZIP file...");
+
+            let nins = [];
+            $("#resultsTable tbody tr").each(function () {
+                let ninCode = $(this).find("td:first").text();
+                nins.push(ninCode);
+            });
+
+            let category_name = $("#category_name").val();
+            let region = $("#region").val();
+
+            $.ajax({
+                url: "/download_zip",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ nins: nins, category_name: category_name, region: region }),
+                xhrFields: {
+                    responseType: "blob"
+                },
+                success: function (blob) {
+                    console.log("✅ ZIP file received, initiating download...");
+                    let a = document.createElement("a");
+                    let url = window.URL.createObjectURL(blob);
+                    a.href = url;
+                    a.download = category_name + "_images.zip";
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                },
+                error: function (xhr, status, error) {
+                    console.error("❌ ZIP Download Failed:", error);
+                    alert("Failed to download ZIP file.");
+                }
+            });
+        });
+    });
+    </script>
+
+</body>
+</html>

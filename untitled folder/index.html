@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Noon NIN Scraper</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Noon NIN Scraper</h1>
+
+        <!-- Form to fetch product details using NIN codes -->
+        <form id="ninForm">
+            <label for="region">Select Country:</label>
+            <select id="region" name="region">
+                <option value="uae">UAE</option>
+                <option value="saudi">Saudi</option>
+            </select>
+
+            <label for="nin">Enter NIN Codes (comma-separated):</label>
+            <input type="text" id="nin" name="nin" placeholder="N14136893A,N70129299V">
+
+            <button type="submit">Fetch Products</button>
+        </form>
+
+        <h2>Product Details</h2>
+        <table id="resultsTable">
+            <thead>
+                <tr>
+                    <th>NIN Code</th>
+                    <th>Product Name</th>
+                    <th>Noon Image</th>
+                    <th>Product Link</th>
+                    <th>Download</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Fetched products will be inserted here -->
+            </tbody>
+        </table>
+
+        <!-- Button to manually download ZIP (Initially hidden) -->
+        <button id="downloadAll" style="display:none;">Download All Images (ZIP)</button>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            console.log("JavaScript Loaded");
+
+            $("#ninForm").submit(function (event) {
+                event.preventDefault();
+                console.log("Fetch Button Clicked");
+
+                let nins = $("#nin").val().trim().split(",");
+                let region = $("#region").val();
+
+                if (nins.length === 0 || nins[0] === "") {
+                    alert("Please enter at least one NIN code.");
+                    return;
+                }
+
+                console.log("Sending AJAX Request to /fetch with data:", nins, region);
+
+                $.ajax({
+                    url: "/fetch",
+                    type: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify({ nins: nins, region: region }),
+                    success: function (data) {
+                        console.log("Response Received:", data);
+                        $("#resultsTable tbody").empty();
+
+                        if (data.length === 0) {
+                            alert("No products found. Check NIN codes.");
+                        } else {
+                            data.forEach(product => {
+                                let row = `<tr>
+                                    <td>${product.nin}</td>
+                                    <td>${product.product_name}</td>
+                                    <td><img src="${product.image_url}" width="100"></td>
+                                    <td><a href="${product.product_url}" target="_blank">View Product</a></td>
+                                    <td><a href="${product.image_url}" download>Download</a></td>
+                                </tr>`;
+                                $("#resultsTable tbody").append(row);
+                            });
+                            $("#downloadAll").show();
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        console.error("AJAX Request Failed:", error);
+                        alert("Failed to fetch product data. Check console for details.");
+                    }
+                });
+            });
+
+            // Ask for category name before downloading the ZIP
+            $("#downloadAll").click(function () {
+                console.log("Download button clicked! Asking for category name...");
+
+                let categoryName = prompt("Enter Category Name for ZIP Download:");
+
+                if (!categoryName || categoryName.trim() === "") {
+                    alert("Please enter a valid category name.");
+                    return;
+                }
+
+                console.log(`Downloading ZIP for category: ${categoryName}`);
+
+                let zipUrl = `/download_zip/${encodeURIComponent(categoryName.trim())}`;
+
+                // Initiate ZIP download
+                window.location.href = zipUrl;
+            });
+        });
+    </script>
+
+</body>
+</html>
