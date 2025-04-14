@@ -16,8 +16,8 @@ import re
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
 # Auto-detect user's Downloads folder
-DEFAULT_DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
-DOWNLOAD_FOLDER = "/Users/akakumar/Desktop/nin-auto-down"
+DEFAULT_DOWNLOAD_DIR = os.path.join(os.getcwd(), "downloads")
+DOWNLOAD_FOLDER = os.path.join(os.getcwd(), "downloads")
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 
 
