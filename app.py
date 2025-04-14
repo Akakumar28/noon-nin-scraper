@@ -9,6 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 import re
+import shutil
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
@@ -30,7 +31,15 @@ def get_product_details(nin, category_name, region="uae"):
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument("--disable-gpu")
         options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_argument("window-size=1920x1080")
+        options.add_argument("--disable-infobars")
+        options.add_argument("--disable-extensions")
+        options.add_argument("--start-maximized")
         options.add_argument("user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
+        # ✅ Add this line (auto-detects the Chromium path)
+        chrome_path = shutil.which("chromium-browser") or shutil.which("chromium")
+        options.binary_location = chrome_path
 
         driver = uc.Chrome(options=options)
         driver.get(product_url)
