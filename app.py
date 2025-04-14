@@ -37,10 +37,41 @@ def get_product_details(nin, category_name, region="uae"):
         options.add_argument("--start-maximized")
         options.add_argument("user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
-        # ✅ Fix: Check and fallback for chrome binary
-        chrome_path = shutil.which("chromium") or shutil.which("google-chrome") or shutil.which("chromium-browser")
+        # ✅ Fix: Check and fallback for chrome binary with debugging
+        print("🔍 Checking for Chrome binary...")
+        chromium_path = shutil.which("chromium")
+        google_chrome_path = shutil.which("google-chrome")
+        chromium_browser_path = shutil.which("chromium-browser")
+        
+        print(f"  - chromium: {chromium_path}")
+        print(f"  - google-chrome: {google_chrome_path}")
+        print(f"  - chromium-browser: {chromium_browser_path}")
+        
+        chrome_path = chromium_path or google_chrome_path or chromium_browser_path
         if not chrome_path:
-            raise Exception("❌ Chromium binary not found. Cannot proceed.")
+            print("❌ Chrome binary not found in PATH")
+            print("Current PATH:", os.environ.get("PATH"))
+            print("Checking common locations:")
+            common_paths = [
+                "/usr/bin/chromium",
+                "/usr/bin/google-chrome",
+                "/usr/bin/chromium-browser",
+                "/usr/bin/chrome",
+                "/usr/local/bin/chromium",
+                "/usr/local/bin/google-chrome"
+            ]
+            for path in common_paths:
+                if os.path.exists(path):
+                    print(f"✅ Found Chrome at: {path}")
+                    chrome_path = path
+                    break
+                else:
+                    print(f"❌ Not found: {path}")
+            
+            if not chrome_path:
+                raise Exception("❌ Chromium binary not found. Cannot proceed.")
+        
+        print(f"✅ Using Chrome binary: {chrome_path}")
         options.binary_location = chrome_path
 
         driver = uc.Chrome(options=options)
