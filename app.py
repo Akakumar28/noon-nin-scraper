@@ -37,8 +37,10 @@ def get_product_details(nin, category_name, region="uae"):
         options.add_argument("--start-maximized")
         options.add_argument("user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
-        # ✅ Add this line (auto-detects the Chromium path)
-        chrome_path = shutil.which("chromium-browser") or shutil.which("chromium")
+        # ✅ Fix: Check and fallback for chrome binary
+        chrome_path = shutil.which("chromium-browser") or shutil.which("chromium") or shutil.which("google-chrome")
+        if not chrome_path:
+            raise EnvironmentError("❌ Chromium binary not found. Cannot proceed.")
         options.binary_location = chrome_path
 
         driver = uc.Chrome(options=options)
