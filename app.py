@@ -69,7 +69,49 @@ def get_product_details(nin, category_name, region="uae"):
                     print(f"❌ Not found: {path}")
             
             if not chrome_path:
-                raise Exception("❌ Chromium binary not found. Cannot proceed.")
+                print("⚠️ Chrome binary not found. Trying fallback approach...")
+                # Fallback: Try using undetected_chromedriver without specifying binary location
+                try:
+                    print("Attempting to use undetected_chromedriver without specifying binary location...")
+                    driver = uc.Chrome(options=options)
+                    driver.get(product_url)
+                    wait = WebDriverWait(driver, 10)
+                    
+                    # Extract Product Name
+                    try:
+                        product_name = wait.until(EC.presence_of_element_located((By.TAG_NAME, "h1"))).text.strip()
+                    except:
+                        product_name = "Unknown"
+
+                    # Extract product image from Noon
+                    image_elements = driver.find_elements(By.CSS_SELECTOR, "img")
+                    image_url = None
+
+                    for img in image_elements:
+                        src = img.get_attribute("src")
+                        if src and "nooncdn.com/p/pnsku" in src and "svg" not in src:
+                            image_url = src.split("?")[0]  # Remove query parameters for highest resolution
+                            break  # Stop at the first valid image
+
+                    if not image_url:
+                        print("❌ No valid image found. Using default placeholder.")
+                        image_url = f"https://f.nooncdn.com/p/pnsku/{nin}/45/_/1722414094/image.jpg"
+
+                    driver.quit()
+
+                    print(f"✅ Scraped Product: {product_name}")
+                    print(f"✅ Image URL: {image_url}")
+
+                    return {
+                        "nin": nin,
+                        "product_name": product_name,
+                        "product_url": product_url,
+                        "image_url": image_url,
+                        "category_name": category_name
+                    }
+                except Exception as e:
+                    print(f"❌ Fallback approach failed: {str(e)}")
+                    raise Exception("❌ Chromium binary not found and fallback approach failed. Cannot proceed.")
         
         print(f"✅ Using Chrome binary: {chrome_path}")
         options.binary_location = chrome_path
