@@ -70,45 +70,64 @@ def get_product_details(nin, category_name, region="uae"):
             
             if not chrome_path:
                 print("⚠️ Chrome binary not found. Trying fallback approach...")
-                # Fallback: Try using undetected_chromedriver without specifying binary location
+                # Fallback: Try using undetected_chromedriver with a default binary location
                 try:
-                    print("Attempting to use undetected_chromedriver without specifying binary location...")
-                    driver = uc.Chrome(options=options)
-                    driver.get(product_url)
-                    wait = WebDriverWait(driver, 10)
+                    print("Attempting to use undetected_chromedriver with default binary location...")
+                    # Set a default binary location that might exist on Render
+                    default_paths = [
+                        "/usr/bin/chromium-browser",
+                        "/usr/bin/chromium",
+                        "/usr/bin/google-chrome",
+                        "/usr/bin/chrome"
+                    ]
                     
-                    # Extract Product Name
-                    try:
-                        product_name = wait.until(EC.presence_of_element_located((By.TAG_NAME, "h1"))).text.strip()
-                    except:
-                        product_name = "Unknown"
+                    # Try each path until one works
+                    for path in default_paths:
+                        try:
+                            print(f"Trying with binary location: {path}")
+                            options.binary_location = path
+                            driver = uc.Chrome(options=options)
+                            driver.get(product_url)
+                            wait = WebDriverWait(driver, 10)
+                            
+                            # Extract Product Name
+                            try:
+                                product_name = wait.until(EC.presence_of_element_located((By.TAG_NAME, "h1"))).text.strip()
+                            except:
+                                product_name = "Unknown"
 
-                    # Extract product image from Noon
-                    image_elements = driver.find_elements(By.CSS_SELECTOR, "img")
-                    image_url = None
+                            # Extract product image from Noon
+                            image_elements = driver.find_elements(By.CSS_SELECTOR, "img")
+                            image_url = None
 
-                    for img in image_elements:
-                        src = img.get_attribute("src")
-                        if src and "nooncdn.com/p/pnsku" in src and "svg" not in src:
-                            image_url = src.split("?")[0]  # Remove query parameters for highest resolution
-                            break  # Stop at the first valid image
+                            for img in image_elements:
+                                src = img.get_attribute("src")
+                                if src and "nooncdn.com/p/pnsku" in src and "svg" not in src:
+                                    image_url = src.split("?")[0]  # Remove query parameters for highest resolution
+                                    break  # Stop at the first valid image
 
-                    if not image_url:
-                        print("❌ No valid image found. Using default placeholder.")
-                        image_url = f"https://f.nooncdn.com/p/pnsku/{nin}/45/_/1722414094/image.jpg"
+                            if not image_url:
+                                print("❌ No valid image found. Using default placeholder.")
+                                image_url = f"https://f.nooncdn.com/p/pnsku/{nin}/45/_/1722414094/image.jpg"
 
-                    driver.quit()
+                            driver.quit()
 
-                    print(f"✅ Scraped Product: {product_name}")
-                    print(f"✅ Image URL: {image_url}")
+                            print(f"✅ Scraped Product: {product_name}")
+                            print(f"✅ Image URL: {image_url}")
 
-                    return {
-                        "nin": nin,
-                        "product_name": product_name,
-                        "product_url": product_url,
-                        "image_url": image_url,
-                        "category_name": category_name
-                    }
+                            return {
+                                "nin": nin,
+                                "product_name": product_name,
+                                "product_url": product_url,
+                                "image_url": image_url,
+                                "category_name": category_name
+                            }
+                        except Exception as e:
+                            print(f"❌ Failed with path {path}: {str(e)}")
+                            continue
+                    
+                    # If we get here, all paths failed
+                    raise Exception("All fallback paths failed")
                 except Exception as e:
                     print(f"❌ Fallback approach failed: {str(e)}")
                     raise Exception("❌ Chromium binary not found and fallback approach failed. Cannot proceed.")

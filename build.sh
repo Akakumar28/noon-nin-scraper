@@ -37,10 +37,11 @@ ls -la /usr/bin/chromium* || echo "No chromium binaries in /usr/bin"
 echo "Creating symlinks for Chromium..."
 ln -sf /usr/bin/chromium-browser /usr/bin/chromium || true
 ln -sf /usr/bin/chromium-browser /usr/bin/google-chrome || true
+ln -sf /usr/bin/chromium-browser /usr/bin/chrome || true
 
 # Debug: Check if symlinks were created
 echo "Checking symlinks:"
-ls -la /usr/bin/chromium /usr/bin/google-chrome || echo "Symlinks not created"
+ls -la /usr/bin/chromium /usr/bin/google-chrome /usr/bin/chrome || echo "Symlinks not created"
 
 # Verify Chromium installation
 echo "Verifying Chromium installation..."
@@ -61,9 +62,30 @@ else
         chmod +x /usr/bin/chromium
         ln -sf /usr/bin/chromium /usr/bin/chromium-browser || true
         ln -sf /usr/bin/chromium /usr/bin/google-chrome || true
+        ln -sf /usr/bin/chromium /usr/bin/chrome || true
     else
         echo "❌ Chromium binary still not found after alternative installation"
-        exit 1
+        echo "Trying one more approach..."
+        
+        # Try installing google-chrome-stable
+        apt-get install -y wget gnupg
+        wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
+        echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google.list
+        apt-get update
+        apt-get install -y google-chrome-stable
+        
+        # Check if google-chrome-stable is installed
+        if [ -f "/usr/bin/google-chrome-stable" ]; then
+            echo "✅ Google Chrome binary found at /usr/bin/google-chrome-stable"
+            chmod +x /usr/bin/google-chrome-stable
+            ln -sf /usr/bin/google-chrome-stable /usr/bin/chromium-browser || true
+            ln -sf /usr/bin/google-chrome-stable /usr/bin/chromium || true
+            ln -sf /usr/bin/google-chrome-stable /usr/bin/google-chrome || true
+            ln -sf /usr/bin/google-chrome-stable /usr/bin/chrome || true
+        else
+            echo "❌ All installation methods failed"
+            exit 1
+        fi
     fi
 fi
 
